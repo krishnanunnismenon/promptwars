@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 
-import {
-  DEFAULT_MODEL,
-  EMPTY_PERSONA,
-  type FutureSelfPersona,
-  type UserProfile,
-} from "@/lib/types";
+import { generate, parseJson, textPart, userTurn } from "@/lib/server/gemini";
+import { EMPTY_PERSONA, type FutureSelfPersona, type UserProfile } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 const TIMEOUT_MS = 30_000;
 
 /**
@@ -90,29 +85,20 @@ function localPersona(profile: UserProfile): FutureSelfPersona {
   };
 }
 
-/** Pulls the JSON object out of a response that may be fenced or padded. */
-function parsePersona(text: string): FutureSelfPersona | null {
-  const candidates = [text, text.replace(/^[\s\S]*?```(?:json)?/, "").replace(/```[\s\S]*$/, "")];
-  const braced = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-  if (braced) candidates.push(braced);
+const hasSystemPrompt = (value: unknown): value is Partial<FutureSelfPersona> =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { systemPrompt?: unknown }).systemPrompt === "string" &&
+  (value as { systemPrompt: string }).systemPrompt.trim().length > 0;
 
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate.trim()) as Partial<FutureSelfPersona>;
-      if (typeof parsed?.systemPrompt === "string" && parsed.systemPrompt.trim()) {
-        return {
-          ...EMPTY_PERSONA,
-          ...parsed,
-          achievements: Array.isArray(parsed.achievements) ? parsed.achievements : [],
-          anchorMemories: Array.isArray(parsed.anchorMemories) ? parsed.anchorMemories : [],
-          speechStyle: typeof parsed.speechStyle === "string" ? parsed.speechStyle : "",
-        };
-      }
-    } catch {
-      /* try the next shape */
-    }
-  }
-  return null;
+function normalise(parsed: Partial<FutureSelfPersona>): FutureSelfPersona {
+  return {
+    ...EMPTY_PERSONA,
+    ...parsed,
+    achievements: Array.isArray(parsed.achievements) ? parsed.achievements : [],
+    anchorMemories: Array.isArray(parsed.anchorMemories) ? parsed.anchorMemories : [],
+    speechStyle: typeof parsed.speechStyle === "string" ? parsed.speechStyle : "",
+  };
 }
 
 import { PersonaRequestBodySchema } from "@/lib/schemas";
@@ -131,80 +117,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ persona: localPersona({} as UserProfile), fallback: true });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
+  const result = await generate({
+    contents: [userTurn(textPart(`Profile JSON:\n${JSON.stringify(profile, null, 2)}`))],
+    systemPrompt: BUILDER_PROMPT,
+    temperature: 0.8,
+    maxOutputTokens: 2048,
+    timeoutMs: TIMEOUT_MS,
+    json: true,
+  });
+
+  if (!result.ok) {
+    console.error("[api/persona]", result.error);
     return NextResponse.json({
       persona: localPersona(profile),
       fallback: true,
-      error: "GEMINI_API_KEY is not set",
+      error: result.error,
     });
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-  try {
-    const response = await fetch(
-      `${API_BASE}/${encodeURIComponent(process.env.GEMINI_MODEL || DEFAULT_MODEL)}:generateContent`,
-      {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: `Profile JSON:\n${JSON.stringify(profile, null, 2)}` }],
-            },
-          ],
-          systemInstruction: { parts: [{ text: BUILDER_PROMPT }] },
-          generationConfig: {
-            temperature: 0.8,
-            maxOutputTokens: 2048,
-            responseMimeType: "application/json",
-          },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.error("[api/persona]", response.status, detail.slice(0, 500));
-      return NextResponse.json({
-        persona: localPersona(profile),
-        fallback: true,
-        error: `Gemini returned ${response.status}`,
-      });
-    }
-
-    const payload = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const text = (payload.candidates?.[0]?.content?.parts ?? [])
-      .map((p) => p.text ?? "")
-      .join("");
-
-    const persona = parsePersona(text);
-    if (!persona) {
-      console.error("[api/persona] unparseable response:", text.slice(0, 300));
-      return NextResponse.json({
-        persona: localPersona(profile),
-        fallback: true,
-        error: "could not parse persona JSON",
-      });
-    }
-
-    return NextResponse.json({ persona });
-  } catch (error) {
-    const reason =
-      error instanceof Error && error.name === "AbortError"
-        ? "timed out"
-        : error instanceof Error
-          ? error.message
-          : "unknown error";
-    console.error("[api/persona] falling back:", reason);
-    return NextResponse.json({ persona: localPersona(profile), fallback: true, error: reason });
-  } finally {
-    clearTimeout(timer);
+  const parsed = parseJson(result.text, hasSystemPrompt);
+  if (!parsed) {
+    console.error("[api/persona] unparseable response:", result.text.slice(0, 300));
+    return NextResponse.json({
+      persona: localPersona(profile),
+      fallback: true,
+      error: "could not parse persona JSON",
+    });
   }
+
+  return NextResponse.json({ persona: normalise(parsed) });
 }

@@ -139,7 +139,6 @@ export default function OnboardingPage() {
       </main>
     );
   }
-
   const screens = [
     <StepShell
       key="name"
@@ -280,6 +279,7 @@ export default function OnboardingPage() {
       <SelfieStep
         value={profile.photoBase64}
         onChange={(photoBase64) => updateProfile({ photoBase64 })}
+        onUploaded={(photoUrl) => updateProfile({ photoUrl })}
       />
     </StepShell>,
 

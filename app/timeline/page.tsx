@@ -4,6 +4,10 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { AnchorMark, SoftBlobs } from "@/components/AnchorMark";
+import { CaregiverNoteCard, useCaregiverNote } from "@/components/CaregiverNote";
+import { DiaryComposer } from "@/components/DiaryComposer";
+import { RELAPSE_LINE } from "@/lib/journey";
+import { endSession } from "@/lib/session";
 import { useAppState } from "@/lib/useAppState";
 
 /**
@@ -17,7 +21,6 @@ import { useAppState } from "@/lib/useAppState";
 const FULL_BLUR_PX = 20;
 const HORIZON_DAYS = 365;
 const BLUR_PER_RELAPSE = 1.6;
-const RELAPSE_LINE = "Still here. Blurrier, not gone.";
 
 /** The demo control is hidden in production unless ?dev=1 is present. */
 const devToolsEnabled = () =>
@@ -26,6 +29,7 @@ const devToolsEnabled = () =>
 
 export default function TimelinePage() {
   const { state, hydrated, update } = useAppState();
+  const note = useCaregiverNote();
   const [busy, setBusy] = useState(false);
 
   const days = state.cleanDays;
@@ -66,6 +70,18 @@ export default function TimelinePage() {
     }));
     setBusy(false);
   }, [days, state.diary, state.profile, update]);
+
+  /** A hand-written entry for today. Newest wins if they write more than one. */
+  const writeEntry = useCallback(
+    (line: string, intent: string) => {
+      const day = Math.max(1, days);
+      update((previous) => ({
+        ...previous,
+        diary: [...previous.diary, { day, line, ...(intent ? { intent } : {}) }],
+      }));
+    },
+    [days, update],
+  );
 
   const recordSlip = useCallback(() => {
     update((previous) => ({
@@ -139,8 +155,18 @@ export default function TimelinePage() {
       </section>
 
       {/* The diary, newest first. */}
-      {/* pb clears the sticky footer so the last entry is never hidden under it. */}
-      <section className="relative flex-1 space-y-2.5 px-5 pb-36">
+      {/* pb clears the sticky footer so the last entry is never hidden under it.
+          The footer grows to three rows at a year, hence the generous value. */}
+      <section className="relative flex-1 space-y-2.5 px-5 pb-56">
+        {/* Their person's words land before the blank box, not after it. */}
+        {note && <CaregiverNoteCard note={note} />}
+
+        <DiaryComposer
+          day={Math.max(1, days)}
+          saved={state.diary.some((entry) => entry.day === Math.max(1, days))}
+          onSave={writeEntry}
+        />
+
         {entries.length === 0 ? (
           <div className="mt-4 rounded-[var(--radius-card)] border border-dashed border-border bg-surface/70 px-6 py-10 text-center">
             <AnchorMark className="mx-auto size-7 text-clay/60" />
@@ -164,31 +190,62 @@ export default function TimelinePage() {
               >
                 <p className="text-sm font-bold text-muted">Day {entry.day}</p>
                 <p className="mt-1 text-[1.0625rem] leading-relaxed text-pretty">{entry.line}</p>
+                {entry.intent && (
+                  <p className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-sage/15 px-3 py-1.5 text-sm font-semibold text-sage-ink">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden>
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                    {entry.intent}
+                  </p>
+                )}
               </article>
             );
           })
         )}
       </section>
 
-      <footer className="sticky bottom-0 space-y-2 bg-gradient-to-t from-cream via-cream to-transparent px-5 pt-5 pb-8">
+      {/* Long fade: the footer floats over the diary, so content must dissolve
+          into it rather than being cut off by a hard edge. */}
+      <footer className="sticky bottom-0 space-y-2 bg-gradient-to-t from-cream from-60% via-cream via-80% to-transparent px-5 pt-12 pb-8">
+        {days >= 365 && (
+          <Link
+            href="/review"
+            className="flex min-h-14 w-full items-center justify-center rounded-full bg-clay text-lg font-semibold text-on-clay shadow-[var(--shadow-card)] transition duration-150 ease-out hover:brightness-110 active:scale-[0.98]"
+          >
+            See your year
+          </Link>
+        )}
+
         {devToolsEnabled() && (
           <button
             type="button"
             onClick={() => void addDay()}
             disabled={busy}
-            className="min-h-14 w-full rounded-full bg-clay text-lg font-semibold text-on-clay shadow-[var(--shadow-card)] transition duration-150 ease-out hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:bg-sunk disabled:text-muted disabled:shadow-none"
+            className="min-h-14 w-full rounded-full bg-surface text-lg font-semibold text-ink shadow-[var(--shadow-card)] transition duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:text-muted"
           >
             {busy ? "Writing today's line…" : "+1 day"}
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={recordSlip}
-          className="min-h-12 w-full rounded-full text-sm font-medium text-muted transition duration-150 ease-out hover:bg-sunk/60 active:scale-[0.98]"
-        >
-          I slipped
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={recordSlip}
+            className="min-h-12 rounded-full px-3 text-sm font-medium text-muted transition duration-150 ease-out active:scale-[0.98]"
+          >
+            I slipped
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              endSession();
+              window.location.href = "/login";
+            }}
+            className="min-h-12 rounded-full px-3 text-sm font-medium text-muted transition duration-150 ease-out active:scale-[0.98]"
+          >
+            Sign out
+          </button>
+        </div>
       </footer>
     </main>
   );

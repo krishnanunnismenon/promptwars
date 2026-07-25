@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Nunito } from "next/font/google";
 import "./globals.css";
 
-/** One family throughout — rounded humanist, friendly at display sizes,
-    still legible at 13px on a label. */
 const nunito = Nunito({
   variable: "--font-nunito",
   subsets: ["latin"],
@@ -17,7 +15,6 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#F3EDE5",
-  // The call screen runs edge to edge on a phone.
   viewportFit: "cover",
 };
 

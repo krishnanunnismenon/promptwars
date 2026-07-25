@@ -44,9 +44,12 @@ function downscaleToBase64(file: File): Promise<string> {
 export function SelfieStep({
   value,
   onChange,
+  onUploaded,
 }: {
   value?: string;
   onChange: (photoBase64: string | undefined) => void;
+  /** Called with the hosted URL once Cloudinary accepts the upload. */
+  onUploaded?: (photoUrl: string | undefined) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -58,14 +61,28 @@ export function SelfieStep({
       setBusy(true);
       setError(null);
       try {
-        onChange(await downscaleToBase64(file));
+        const base64 = await downscaleToBase64(file);
+        // Show it immediately; the upload happens behind the preview.
+        onChange(base64);
+
+        try {
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageBase64: base64 }),
+          });
+          const payload = (await response.json()) as { url?: string | null };
+          if (payload?.url) onUploaded?.(payload.url);
+        } catch {
+          // Upload is best-effort — the local copy already works everywhere.
+        }
       } catch {
         setError("That photo didn't load. You can skip this step.");
       } finally {
         setBusy(false);
       }
     },
-    [onChange],
+    [onChange, onUploaded],
   );
 
   return (

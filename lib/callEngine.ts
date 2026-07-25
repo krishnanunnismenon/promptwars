@@ -49,7 +49,14 @@ export function classifySafetyRisk(text: string): SafetyRisk {
 }
 
 const SILENCE_MS = 8_000;
-const COMMITMENT_AFTER_MS = 120_000;
+/**
+ * The call is deliberately short. Someone mid-craving can't hold a long
+ * conversation, and a three-minute call they finish beats a ten-minute one they
+ * hang up on. At ~75s the future self asks for the ten-minute commitment; at
+ * ~2:45 it closes the call itself rather than waiting to be hung up on.
+ */
+const COMMITMENT_AFTER_MS = 75_000;
+const CALL_MAX_MS = 165_000;
 const SENTENCE_GAP_MS = 190;
 const SPEECH_RATE = 0.9;
 /** The camera moment fires after this many real user turns. */
@@ -66,8 +73,11 @@ const CAMERA_LINE = "Show me where you are. Just point the camera.";
 const SILENCE_NUDGE = "[user is silent — continue gently, no questions]";
 const OPENING_NUDGE = "[call just connected — open the conversation yourself]";
 const COMMITMENT_NUDGE =
-  "[two minutes in — now propose the ten-minute commitment: we do nothing " +
-  "for ten minutes together, then we decide. Keep it to a few short sentences.]";
+  "[now propose the ten-minute commitment: we do nothing for ten minutes " +
+  "together, then we decide. Two short sentences, then one yes/no question.]";
+const WRAPUP_NUDGE =
+  "[the call is ending now — close it warmly in two short sentences. Tell them " +
+  "we're staying with them for the ten minutes. Ask nothing.]";
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(() => resolve(), ms));
 
@@ -83,29 +93,98 @@ export function buildContext(state: AppState): string {
     `Context for this call: it is ${partOfDay} on a ${weekday}.`,
     `They are on day ${Math.max(1, state.cleanDays)}.`,
     `Use this naturally if it helps. Do not recite it.`,
-  ].join(" ");
+    ``,
+    `LENGTH AND QUESTIONS — these override anything above:`,
+    `- This call lasts about three minutes. Every reply is ONE or TWO short sentences. Never more.`,
+    `- Ask only yes/no or one-word questions: "Are you sitting down?", "Home or outside?", "Water or tea?".`,
+    `- Never ask anything that needs explaining. They have no energy to explain.`,
+    `- It is fine to ask nothing at all and simply keep them company.`,
+  ].join("\n");
 }
 
-/** Prefers a deep, warm, local English voice; falls back to anything English. */
+/** Manual override for demos: localStorage.setItem("anchor:voice", "Samantha") */
+const VOICE_OVERRIDE_KEY = "anchor:voice";
+
+/**
+ * Voices named "Compact", or the bare OS defaults, are the flat robotic ones.
+ * The warm, human-sounding voices are the downloadable/network tiers, which
+ * announce themselves as Enhanced / Premium / Neural / Natural, or (on Android)
+ * are the "Google …" set. So we score rather than take the first English match.
+ */
+const WARM_VOICE_NAMES = [
+  // macOS / iOS, warmest first. "(Enhanced)" and "(Premium)" are separate entries.
+  "Samantha",
+  "Ava",
+  "Allison",
+  "Susan",
+  "Nicky",
+  "Karen",
+  "Moira",
+  "Tessa",
+  // Android / Chrome network voices — far better than the local fallbacks.
+  "Google UK English Female",
+  "Google US English",
+];
+
+function scoreVoice(voice: SpeechSynthesisVoice): number {
+  const name = voice.name.toLowerCase();
+  let score = 0;
+
+  // Quality tier does most of the work.
+  if (/(neural|natural|premium|enhanced)/.test(name)) score += 60;
+  if (name.startsWith("google")) score += 35;
+  if (/compact/.test(name)) score -= 50;
+  if (/(eloquence|espeak|pico)/.test(name)) score -= 70;
+
+  // Then the named shortlist, best-first.
+  const index = WARM_VOICE_NAMES.findIndex((candidate) =>
+    name.includes(candidate.toLowerCase()),
+  );
+  if (index >= 0) score += 40 - index * 2;
+
+  // Prefer the user's own locale variant, then any English.
+  const lang = voice.lang?.toLowerCase() ?? "";
+  if (typeof navigator !== "undefined" && lang === navigator.language?.toLowerCase()) score += 12;
+  if (lang.startsWith("en")) score += 20;
+  if (lang.startsWith("en-in") || lang.startsWith("en-gb")) score += 6;
+
+  return score;
+}
+
+/** Picks the warmest available English voice, honouring a manual override. */
 function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null;
-  const preferred = [
-    "Daniel",
-    "Google UK English Male",
-    "Alex",
-    "Rishi",
-    "Google US English",
-    "Samantha",
-    "Karen",
-  ];
+
+  try {
+    const override = localStorage.getItem(VOICE_OVERRIDE_KEY);
+    if (override) {
+      const match = voices.find((v) => v.name.toLowerCase().includes(override.toLowerCase()));
+      if (match) return match;
+    }
+  } catch {
+    /* storage unavailable — fall through to scoring */
+  }
+
   const english = voices.filter((v) => v.lang?.toLowerCase().startsWith("en"));
   const pool = english.length > 0 ? english : voices;
 
-  for (const name of preferred) {
-    const match = pool.find((v) => v.name === name || v.name.includes(name));
-    if (match) return match;
+  return [...pool].sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] ?? null;
+}
+
+/** Every voice the device offers, for the picker on the call screen. */
+export function listVoices(): SpeechSynthesisVoice[] {
+  if (typeof speechSynthesis === "undefined") return [];
+  const english = speechSynthesis.getVoices().filter((v) => v.lang?.toLowerCase().startsWith("en"));
+  return english.sort((a, b) => scoreVoice(b) - scoreVoice(a));
+}
+
+export function setPreferredVoice(name: string | null) {
+  try {
+    if (name) localStorage.setItem(VOICE_OVERRIDE_KEY, name);
+    else localStorage.removeItem(VOICE_OVERRIDE_KEY);
+  } catch {
+    /* ignore */
   }
-  return pool.find((v) => v.localService) ?? pool[0];
 }
 
 export class CallEngine {
@@ -119,6 +198,7 @@ export class CallEngine {
   private disposed = false;
 
   private userTurns = 0;
+  private wrappingUp = false;
   private cameraDone = false;
   private cameraOpen = false;
   private frame: string | null = null;
@@ -175,8 +255,42 @@ export class CallEngine {
 
   async start() {
     this.startedAt = Date.now();
+    this.warmUpVoices();
     this.emit();
     await this.turn(OPENING_NUDGE);
+  }
+
+  /**
+   * Chrome returns an empty voice list on first call and fills it
+   * asynchronously. Without this the *first* sentence — the one that matters
+   * most — gets the flat browser default.
+   */
+  private warmUpVoices() {
+    if (typeof speechSynthesis === "undefined") return;
+    this.voice = pickVoice(speechSynthesis.getVoices());
+    if (this.voice) return;
+    speechSynthesis.addEventListener(
+      "voiceschanged",
+      () => {
+        if (!this.voice) this.voice = pickVoice(speechSynthesis.getVoices());
+      },
+      { once: true },
+    );
+  }
+
+  /**
+   * The conversation as it actually happened, for summarising. Bracketed stage
+   * directions are stripped — they were never spoken and would confuse a
+   * summary of what the *person* said.
+   */
+  get transcript(): ChatTurn[] {
+    return this.history.filter(
+      (turn) => !(turn.role === "user" && /^\s*\[[\s\S]*\]\s*$/.test(turn.content)),
+    );
+  }
+
+  get durationMs(): number {
+    return Date.now() - this.startedAt;
   }
 
   toggleMute() {
@@ -262,7 +376,15 @@ export class CallEngine {
       return;
     }
 
-    // Two minutes in, the future self asks for the ten minutes — once.
+    // Time's up: close the call ourselves rather than letting it drift.
+    if (!this.wrappingUp && Date.now() - this.startedAt > CALL_MAX_MS) {
+      this.wrappingUp = true;
+      await this.turn(WRAPUP_NUDGE);
+      if (!this.disposed) this.end();
+      return;
+    }
+
+    // The future self asks for the ten minutes — once.
     if (!this.commitmentOffered && Date.now() - this.startedAt > COMMITMENT_AFTER_MS) {
       this.commitmentOffered = true;
       this.emit();
@@ -403,7 +525,10 @@ export class CallEngine {
       const utterance = new SpeechSynthesisUtterance(sentence);
       if (this.voice) utterance.voice = this.voice;
       utterance.rate = SPEECH_RATE;
-      utterance.pitch = 0.92;
+      // Slightly above neutral. Dropping pitch below 1 was making the voice
+      // read as flat and synthetic rather than calm.
+      utterance.pitch = 1.05;
+      utterance.volume = 1;
       utterance.lang = this.voice?.lang ?? "en-US";
 
       utterance.onstart = () => {

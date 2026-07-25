@@ -7,10 +7,15 @@ export interface UserProfile {
   losses: string[]; // chips selected
   dreams: string[]; // chips selected
   voiceNoteTranscript: string; // the "life in one year" note
+  /** Local copy, used for the instant preview during onboarding. */
   photoBase64?: string;
+  /** Cloudinary URL once the upload lands. Prefer this when present. */
+  photoUrl?: string;
   caregiverName?: string;
   /** Optional phone number. Used only to open the user's own SMS / WhatsApp app. */
   caregiverPhone?: string;
+  /** The person's own number — the key they sign in with. Digits only. */
+  phone?: string;
   caregiverQuote?: string;
 }
 
@@ -25,8 +30,18 @@ export interface AppState {
   profile: UserProfile;
   persona: FutureSelfPersona;
   cleanDays: number;
-  diary: { day: number; line: string }[];
-  callHistory: { timestamp: number; outcome: "calmed" | "escalated" }[];
+  diary: { day: number; line: string; intent?: string }[];
+  callHistory: {
+    timestamp: number;
+    outcome: "calmed" | "escalated";
+    /** Everything below is filled in after the call, by /api/call-summary.
+        Optional so records written before summarising stay valid. */
+    durationMs?: number;
+    summary?: string;
+    mood?: string;
+    triggers?: string[];
+    whatHelped?: string;
+  }[];
   /**
    * Added for /timeline: slips nudge the avatar's blur back up without
    * resetting the day count. Optional so existing stored states stay valid.

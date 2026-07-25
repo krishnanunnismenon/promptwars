@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { DEFAULT_MODEL, type UserProfile } from "@/lib/types";
+import { generate, userTurn, textPart } from "@/lib/server/gemini";
+import type { UserProfile } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const MODEL_ID = process.env.GEMINI_MODEL || DEFAULT_MODEL;
-const TIMEOUT_MS = 15_000;
 
 /**
  * One diary line per clean day, in the future self's voice. The line is the
@@ -67,46 +64,18 @@ export async function POST(request: Request) {
   const fallback = () =>
     NextResponse.json({ line: FALLBACKS[day % FALLBACKS.length], fallback: true });
 
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
-  if (!apiKey) return fallback();
+  const result = await generate({
+    contents: [userTurn(textPart(buildPrompt(profile, day, recent)))],
+    temperature: 1,
+    maxOutputTokens: 120,
+    timeoutMs: 15_000,
+  });
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-  try {
-    const response = await fetch(
-      `${API_BASE}/${encodeURIComponent(MODEL_ID)}:generateContent`,
-      {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: buildPrompt(profile, day, recent) }] }],
-          generationConfig: { temperature: 1, maxOutputTokens: 120 },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      console.error("[api/diary]", response.status);
-      return fallback();
-    }
-
-    const payload = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const line = (payload.candidates?.[0]?.content?.parts ?? [])
-      .map((p) => p.text ?? "")
-      .join("")
-      .trim()
-      .replace(/^["']|["']$/g, "")
-      .replace(/^Day\s+\d+[.:]\s*/i, "");
-
-    return line ? NextResponse.json({ line }) : fallback();
-  } catch (error) {
-    console.error("[api/diary] falling back:", error);
+  if (!result.ok) {
+    console.error("[api/diary]", result.error);
     return fallback();
-  } finally {
-    clearTimeout(timer);
   }
+
+  const line = result.text.replace(/^["']|["']$/g, "").replace(/^Day\s+\d+[.:]\s*/i, "");
+  return line ? NextResponse.json({ line }) : fallback();
 }

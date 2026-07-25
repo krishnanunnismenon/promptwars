@@ -56,10 +56,10 @@ We maintain a unit and integration test suite using **Vitest** and **React Testi
 
 ```bash
 # Run test suite
-npm run test
+pnpm run test
 
 # Run tests in watch mode
-npm run test:watch
+pnpm run test:watch
 ```
 
 ### Test Coverage Highlights
@@ -88,7 +88,7 @@ npm run test:watch
 
 2. **Install dependencies**:
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Set Environment Variables**:
@@ -100,7 +100,7 @@ npm run test:watch
 
 4. **Run Dev Server**:
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 ---

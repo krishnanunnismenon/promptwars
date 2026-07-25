@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { SoftBlobs } from "@/components/AnchorMark";
+import { CaregiverNoteCard, useCaregiverNote } from "@/components/CaregiverNote";
 import { Helplines } from "@/components/Helplines";
 import { Waveform } from "@/components/call/Waveform";
 import { useCallEngine } from "@/lib/callEngine";
@@ -65,31 +66,84 @@ function CallButton({
 export default function CallPage() {
   const router = useRouter();
   const { state, hydrated, update } = useAppState();
+  const note = useCaregiverNote();
   const [screen, setScreen] = useState<Screen>("incoming");
   const [showHelp, setShowHelp] = useState(false);
   const [messageOpened, setMessageOpened] = useState(false);
   const [countdown, setCountdown] = useState(COMMITMENT_MS);
+  const [summary, setSummary] = useState<string | null>(null);
   const safetyHandled = useRef(false);
+  /** Timestamp of the escalation record, so its summary patches the right row. */
+  const lastEscalationStamp = useRef<number | null>(null);
 
   useRingtone(screen === "incoming");
   const { snapshot, engine } = useCallEngine(state, screen === "in-call");
 
   const getLevel = useCallback(() => engine.current?.level ?? 0.05, [engine]);
 
-  /** `outcome: null` ends without logging — used when escalation already did. */
+  /**
+   * `outcome: null` ends without logging — used when escalation already did.
+   *
+   * The record is written immediately so nothing is lost if the summary call
+   * fails or the user closes the tab; the summary is patched onto it after.
+   */
   const finish = useCallback(
     (outcome: "calmed" | "escalated" | null) => {
-      engine.current?.end();
+      const active = engine.current;
+      const transcript = active?.transcript ?? [];
+      const durationMs = active?.durationMs ?? 0;
+      const timestamp = Date.now();
+
+      active?.end();
+
       if (outcome) {
         update((previous) => ({
           ...previous,
-          callHistory: [...previous.callHistory, { timestamp: Date.now(), outcome }],
+          callHistory: [...previous.callHistory, { timestamp, outcome, durationMs }],
         }));
       }
       setScreen("ended");
+
+      // Summarise in the background; the ended screen doesn't wait on it.
+      const stamp = outcome ? timestamp : lastEscalationStamp.current;
+      if (stamp && transcript.length > 0) {
+        void fetch("/api/call-summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript, profile: state.profile }),
+        })
+          .then((response) => response.json())
+          .then((payload: { summary?: string; mood?: string; triggers?: string[]; whatHelped?: string }) => {
+            if (!payload?.summary) return;
+            setSummary(payload.summary);
+            update((previous) => ({
+              ...previous,
+              callHistory: previous.callHistory.map((record) =>
+                record.timestamp === stamp
+                  ? {
+                      ...record,
+                      durationMs: record.durationMs ?? durationMs,
+                      summary: payload.summary,
+                      mood: payload.mood,
+                      triggers: payload.triggers,
+                      whatHelped: payload.whatHelped,
+                    }
+                  : record,
+              ),
+            }));
+          })
+          .catch(() => {
+            /* the call record stands on its own without a summary */
+          });
+      }
     },
-    [engine, update],
+    [engine, state.profile, update],
   );
+
+  // The engine closes the call itself once it runs out of time.
+  useEffect(() => {
+    if (screen === "in-call" && snapshot.phase === "ended") finish("calmed");
+  }, [finish, screen, snapshot.phase]);
 
   /**
    * Logged the moment it's pressed, not when the call ends — the caregiver
@@ -98,12 +152,11 @@ export default function CallPage() {
   const escalate = useCallback(() => {
     if (safetyHandled.current) return;
     safetyHandled.current = true;
+    const timestamp = Date.now();
+    lastEscalationStamp.current = timestamp;
     update((previous) => ({
       ...previous,
-      callHistory: [
-        ...previous.callHistory,
-        { timestamp: Date.now(), outcome: "escalated" as const },
-      ],
+      callHistory: [...previous.callHistory, { timestamp, outcome: "escalated" as const }],
     }));
     void engine.current?.escalate(state.profile.caregiverName);
     setShowHelp(true);
@@ -165,6 +218,13 @@ export default function CallPage() {
             You — one year from now
           </h1>
           <p className="mt-2 text-base text-night-muted">wants to talk for ten minutes</p>
+
+          {/* Their person's words, while the phone is still ringing. */}
+          {note && (
+            <div className="mt-9 w-full px-6">
+              <CaregiverNoteCard note={note} tone="night" />
+            </div>
+          )}
         </div>
 
         <div className="relative flex items-center justify-between px-14 pb-20">
@@ -366,6 +426,16 @@ export default function CallPage() {
         </svg>
         <span className="text-5xl font-bold">{mmss(countdown)}</span>
       </div>
+
+      {/* What they said, in their record. Appears when the summary lands. */}
+      {summary && (
+        <div className="animate-rise relative w-full rounded-[var(--radius-card)] border border-night-ink/12 bg-night-raised/70 p-5">
+          <p className="text-sm font-bold text-night-muted">Saved to your journey</p>
+          <p className="mt-2 text-[1.0625rem] leading-relaxed text-night-ink/85 text-pretty">
+            {summary}
+          </p>
+        </div>
+      )}
 
       <div className="relative w-full">
         <Helplines tone="night" />

@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 
 import { AnchorMark, AnchorWordmark, SoftBlobs } from "@/components/AnchorMark";
 import { Helplines } from "@/components/Helplines";
+import { NoteComposer } from "@/components/NoteComposer";
+import { endSession } from "@/lib/session";
 import { normalizeAppState } from "@/lib/storage";
 import { useAppState } from "@/lib/useAppState";
 import type { AppState, CallOutcome } from "@/lib/types";
@@ -17,9 +19,9 @@ import type { AppState, CallOutcome } from "@/lib/types";
  * profile straight from Mongo instead.
  */
 
-interface Advice {
-  say: string[];
-  avoid: string[];
+interface Tips {
+  focus: string;
+  tips: { title: string; detail: string }[];
 }
 
 /** "today at 9:42 pm" / "yesterday at ..." / a date for anything older. */
@@ -45,7 +47,7 @@ function CaregiverView() {
   const local = useAppState();
   const [remote, setRemote] = useState<AppState | null>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
-  const [advice, setAdvice] = useState<Advice | null>(null);
+  const [tips, setTips] = useState<Tips | null>(null);
 
   // A caregiver on their own phone reads the profile from Mongo.
   useEffect(() => {
@@ -83,23 +85,19 @@ function CaregiverView() {
     void fetch("/api/caregiver", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        profile: state.profile,
-        lastOutcome: outcome,
-        cleanDays: state.cleanDays,
-      }),
+      body: JSON.stringify({ state }),
     })
       .then((response) => response.json())
-      .then((payload: Advice) => {
-        if (!cancelled && payload?.say?.length) setAdvice(payload);
+      .then((payload: Tips) => {
+        if (!cancelled && payload?.tips?.length) setTips(payload);
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-    // Keyed on the signals that change the advice, not the whole object.
+    // Keyed on the signals that change the tips, not the whole object.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.profile.name, outcome, state?.cleanDays]);
+  }, [state?.profile.name, outcome, state?.cleanDays, state?.relapses, state?.callHistory.length]);
 
   if (!ready) return <main className="min-h-dvh bg-cream" />;
 
@@ -178,59 +176,76 @@ function CaregiverView() {
         </div>
       </section>
 
+      {/* Needs a profile id to write against — only present on the shared link. */}
+      {remoteId && (
+        <div className="relative">
+          <NoteComposer
+            profileId={remoteId}
+            name={name}
+            from={state.profile.caregiverName || "Your person"}
+          />
+        </div>
+      )}
+
       <section className="relative rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
-        <h2 className="text-sm font-bold text-sage-ink">What to say tonight</h2>
-        {advice ? (
-          <ul className="mt-3 space-y-3">
-            {advice.say.map((line, index) => (
-              <li
-                key={line}
-                className="animate-rise flex gap-3 text-[1.0625rem] leading-relaxed text-pretty"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-sage" />
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
+        <h2 className="text-sm font-bold text-sage-ink">Tips for today</h2>
+
+        {tips ? (
+          <>
+            <p className="mt-2 text-[1.0625rem] leading-relaxed font-semibold text-pretty">
+              {tips.focus}
+            </p>
+            <ul className="mt-4 space-y-4">
+              {tips.tips.map((tip, index) => (
+                <li
+                  key={tip.title}
+                  className="animate-rise"
+                  style={{ animationDelay: `${index * 60}ms` }}
+                >
+                  <p className="text-[1.0625rem] font-bold">{tip.title}</p>
+                  <p className="mt-0.5 text-[1.0625rem] leading-relaxed text-muted text-pretty">
+                    {tip.detail}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </>
         ) : (
           /* Skeleton rather than a spinner — the card keeps its shape. */
-          <ul className="mt-3 space-y-3" aria-hidden>
+          <ul className="mt-4 space-y-4" aria-hidden>
             {[0, 1, 2].map((i) => (
-              <li key={i} className="flex gap-3">
-                <span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-sunk" />
+              <li key={i} className="space-y-2">
+                <span className="block h-4 w-32 animate-pulse rounded-full bg-sunk" />
                 <span
-                  className="h-4 animate-pulse rounded-full bg-sunk"
-                  style={{ width: `${72 - i * 12}%` }}
+                  className="block h-4 animate-pulse rounded-full bg-sunk"
+                  style={{ width: `${86 - i * 10}%` }}
                 />
               </li>
             ))}
           </ul>
         )}
 
-        {advice && (
-          <>
-            <div className="my-5 h-px bg-border" />
-            <h2 className="text-sm font-bold text-muted">What not to say</h2>
-            <ul className="mt-3 space-y-3">
-              {advice.avoid.map((line, index) => (
-                <li
-                  key={line}
-                  className="animate-rise flex gap-3 text-[1.0625rem] leading-relaxed text-muted text-pretty"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-border" />
-                  <span>{line}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted text-pretty">
+          Based on {state.cleanDays} day{state.cleanDays === 1 ? "" : "s"},{" "}
+          {state.relapses ?? 0} slip{(state.relapses ?? 0) === 1 ? "" : "s"}, and{" "}
+          {state.callHistory.length} call{state.callHistory.length === 1 ? "" : "s"}.
+        </p>
       </section>
 
       <div className="relative">
         <Helplines />
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          endSession();
+          window.location.href = "/login";
+        }}
+        className="relative min-h-12 text-sm font-medium text-muted underline underline-offset-4"
+      >
+        Sign out
+      </button>
     </main>
   );
 }

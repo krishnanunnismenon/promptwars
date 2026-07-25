@@ -16,6 +16,16 @@ export const PROFILES_COLLECTION = "profiles";
 export type StoredProfile = AppState & {
   _id: string;
   updatedAt: number;
+  /**
+   * The caregiver's standing note. Server-side only, never part of AppState —
+   * the device's local-first sync would otherwise race with the caregiver's
+   * writes. See app/api/note/route.ts.
+   */
+  caregiverNote?: {
+    text: string;
+    from: string;
+    updatedAt: number;
+  };
 };
 
 declare global {
