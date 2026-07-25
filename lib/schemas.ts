@@ -13,7 +13,10 @@ export const UserProfileSchema = z.object({
   dreams: z.array(z.string().max(100)).optional().default([]),
   voiceNoteTranscript: z.string().max(5000).optional().default(""),
   photoBase64: z.string().optional(),
+  photoUrl: z.string().url().optional(),
+  phone: z.string().max(20).optional(),
   caregiverName: z.string().max(100).optional(),
+  caregiverPhone: z.string().max(20).optional(),
   caregiverQuote: z.string().max(500).optional(),
 });
 

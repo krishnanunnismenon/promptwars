@@ -1,4 +1,4 @@
-import { CaregiverRequestBodySchema, GeminiRequestBodySchema, PersonaRequestBodySchema, UserProfileSchema } from "@/lib/schemas";
+import { CaregiverRequestBodySchema, GeminiRequestBodySchema, UserProfileSchema } from "@/lib/schemas";
 
 describe("Strict API Schema Validation", () => {
   it("validates correct GeminiRequestBodySchema payloads", () => {
@@ -27,6 +27,8 @@ describe("Strict API Schema Validation", () => {
       substance: "Alcohol",
       losses: ["Job", "Trust"],
       dreams: ["Health"],
+      phone: "9876543210",
+      caregiverPhone: "9876543211",
     };
 
     const result = UserProfileSchema.safeParse(profile);
@@ -34,7 +36,12 @@ describe("Strict API Schema Validation", () => {
     if (result.success) {
       expect(result.data.name).toBe("Alex");
       expect(result.data.losses).toEqual(["Job", "Trust"]);
+      expect(result.data.caregiverPhone).toBe("9876543211");
     }
+  });
+
+  it("rejects oversized voice transcripts before they reach a model route", () => {
+    expect(UserProfileSchema.safeParse({ voiceNoteTranscript: "x".repeat(5001) }).success).toBe(false);
   });
 
   it("validates CaregiverRequestBodySchema", () => {
