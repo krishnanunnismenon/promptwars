@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { SoftBlobs } from "@/components/AnchorMark";
@@ -67,7 +67,9 @@ export default function CallPage() {
   const { state, hydrated, update } = useAppState();
   const [screen, setScreen] = useState<Screen>("incoming");
   const [showHelp, setShowHelp] = useState(false);
+  const [messageOpened, setMessageOpened] = useState(false);
   const [countdown, setCountdown] = useState(COMMITMENT_MS);
+  const safetyHandled = useRef(false);
 
   useRingtone(screen === "incoming");
   const { snapshot, engine } = useCallEngine(state, screen === "in-call");
@@ -94,6 +96,8 @@ export default function CallPage() {
    * view should light up while this person is still on the phone.
    */
   const escalate = useCallback(() => {
+    if (safetyHandled.current) return;
+    safetyHandled.current = true;
     update((previous) => ({
       ...previous,
       callHistory: [
@@ -104,6 +108,19 @@ export default function CallPage() {
     void engine.current?.escalate(state.profile.caregiverName);
     setShowHelp(true);
   }, [engine, state.profile.caregiverName, update]);
+
+  // Hard safety routing for high-risk spoken phrases. This happens before any
+  // generated reply can make the decision ambiguous.
+  useEffect(() => {
+    if (snapshot.risk === "urgent") escalate();
+  }, [escalate, snapshot.risk]);
+
+  const caregiverNumber = (state.profile.caregiverPhone ?? "").replace(/[^+\d]/g, "");
+  const caregiverMessage = `${state.profile.name || "I"} needs support right now. Please call or check in as soon as you can.`;
+  const smsHref = caregiverNumber ? `sms:${caregiverNumber}?body=${encodeURIComponent(caregiverMessage)}` : "";
+  const whatsappHref = caregiverNumber
+    ? `https://wa.me/${caregiverNumber.replace(/^\+/, "")}?text=${encodeURIComponent(caregiverMessage)}`
+    : "";
 
   useEffect(() => {
     if (screen !== "ended") return;
@@ -250,12 +267,48 @@ export default function CallPage() {
             <div className="animate-slide-in-right space-y-4 rounded-[var(--radius-card)] border border-night-ink/12 bg-night-raised p-6">
               <h2 className="text-2xl font-bold text-balance">
                 {state.profile.caregiverName
-                  ? `${state.profile.caregiverName} has been told.`
-                  : "Help is on the way."}
+                  ? `Let ${state.profile.caregiverName} know now.`
+                  : "Bring someone in now."}
               </h2>
               <p className="text-lg leading-relaxed text-night-ink/75 text-pretty">
-                You don&apos;t have to do anything. Stay on the line if you want to.
+                We&apos;ve prepared the message. One tap opens your phone&apos;s messaging app — you stay in control of sending it.
               </p>
+
+              {caregiverNumber ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href={`tel:${caregiverNumber}`}
+                    className="flex min-h-14 items-center justify-center rounded-full bg-sage px-4 text-center font-semibold text-night"
+                  >
+                    Call now
+                  </a>
+                  <a
+                    href={smsHref}
+                    onClick={() => setMessageOpened(true)}
+                    className="flex min-h-14 items-center justify-center rounded-full border border-night-ink/20 px-4 text-center font-semibold text-night-ink"
+                  >
+                    Text {state.profile.caregiverName || "them"}
+                  </a>
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setMessageOpened(true)}
+                    className="col-span-2 flex min-h-12 items-center justify-center rounded-full text-sm font-semibold text-night-muted hover:bg-night-ink/10"
+                  >
+                    Or open WhatsApp
+                  </a>
+                  {messageOpened && (
+                    <p role="status" className="col-span-2 text-center text-sm text-night-muted">
+                      Message opened. Tap send, then come straight back here.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="rounded-2xl bg-night/45 px-4 py-3 text-sm leading-relaxed text-night-muted">
+                  No number is saved yet. Use the urgent support line below, or call someone you trust.
+                </p>
+              )}
 
               <Helplines tone="night" />
 

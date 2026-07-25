@@ -9,6 +9,8 @@ export interface UserProfile {
   voiceNoteTranscript: string; // the "life in one year" note
   photoBase64?: string;
   caregiverName?: string;
+  /** Optional phone number. Used only to open the user's own SMS / WhatsApp app. */
+  caregiverPhone?: string;
   caregiverQuote?: string;
 }
 

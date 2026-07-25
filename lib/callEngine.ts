@@ -24,6 +24,9 @@ export type CallPhase =
   | "thinking"
   | "ended";
 
+/** A deliberately small, deterministic safety layer. The model never owns this decision. */
+export type SafetyRisk = "support" | "urgent";
+
 export interface CallSnapshot {
   phase: CallPhase;
   /** What the future self is saying right now, for the caption line. */
@@ -36,6 +39,13 @@ export interface CallSnapshot {
   cameraOpen: boolean;
   /** Last captured frame, shown as picture-in-picture for a few seconds. */
   frame: string | null;
+  risk: SafetyRisk;
+}
+
+const URGENT_LANGUAGE = /\b(kill myself|want to die|end my life|suicide|overdose|took too much|can't stay safe|hurt myself|harm myself)\b/i;
+
+export function classifySafetyRisk(text: string): SafetyRisk {
+  return URGENT_LANGUAGE.test(text) ? "urgent" : "support";
 }
 
 const SILENCE_MS = 8_000;
@@ -112,6 +122,7 @@ export class CallEngine {
   private cameraDone = false;
   private cameraOpen = false;
   private frame: string | null = null;
+  private risk: SafetyRisk = "support";
   private frameTimer: ReturnType<typeof setTimeout> | null = null;
 
   private recognition: SpeechRecognitionLike | null = null;
@@ -141,6 +152,7 @@ export class CallEngine {
       commitmentOffered: this.commitmentOffered,
       cameraOpen: this.cameraOpen,
       frame: this.frame,
+      risk: this.risk,
     };
   }
 
@@ -221,7 +233,13 @@ export class CallEngine {
     this.clearSilenceTimer();
     this.stopListening();
     this.history.push({ role: "user", content: input });
-    if (visible) this.userTurns += 1;
+    if (visible) {
+      this.userTurns += 1;
+      if (classifySafetyRisk(input) === "urgent") {
+        this.risk = "urgent";
+        this.emit();
+      }
+    }
 
     this.setPhase("thinking");
     this.caption = "";
@@ -511,6 +529,7 @@ export function useCallEngine(state: AppState, active: boolean) {
     commitmentOffered: false,
     cameraOpen: false,
     frame: null,
+    risk: "support",
   });
 
   useEffect(() => {

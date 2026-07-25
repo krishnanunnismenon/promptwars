@@ -3,7 +3,7 @@
  * reads as steadying rather than nautical-decorative. Used small (a wordmark
  * companion) and large (the resting state on the home screen).
  */
-jexport function AnchorMark({ className = "size-6" }: { className?: string }) {
+export function AnchorMark({ className = "size-6" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 32 32"

@@ -82,10 +82,18 @@ function extractText(payload: unknown): string {
     .trim();
 }
 
+import { GeminiRequestBodySchema } from "@/lib/schemas";
+
 export async function POST(request: Request) {
   let body: GeminiRequestBody;
   try {
-    body = (await request.json()) as GeminiRequestBody;
+    const rawBody = await request.json();
+    const result = GeminiRequestBodySchema.safeParse(rawBody);
+    if (!result.success) {
+      const issue = result.error.issues[0]?.message ?? "Schema validation failed";
+      return fallback(`Invalid request schema: ${issue}`);
+    }
+    body = result.data as GeminiRequestBody;
   } catch {
     return fallback("request body was not valid JSON");
   }

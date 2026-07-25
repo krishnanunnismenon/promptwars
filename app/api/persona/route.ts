@@ -115,11 +115,18 @@ function parsePersona(text: string): FutureSelfPersona | null {
   return null;
 }
 
+import { PersonaRequestBodySchema } from "@/lib/schemas";
+
 export async function POST(request: Request) {
   let profile: UserProfile;
   try {
-    const body = (await request.json()) as { profile?: UserProfile };
-    profile = (body?.profile ?? body) as UserProfile;
+    const rawBody = await request.json();
+    const result = PersonaRequestBodySchema.safeParse(rawBody);
+    if (result.success) {
+      profile = ("profile" in result.data && result.data.profile ? result.data.profile : result.data) as UserProfile;
+    } else {
+      profile = (rawBody?.profile ?? rawBody) as UserProfile;
+    }
   } catch {
     return NextResponse.json({ persona: localPersona({} as UserProfile), fallback: true });
   }

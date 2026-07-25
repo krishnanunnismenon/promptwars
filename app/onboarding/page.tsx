@@ -297,18 +297,35 @@ export default function OnboardingPage() {
       }
     >
       <div className="space-y-4">
+        <label className="block">
+          <span className="sr-only">Caregiver name</span>
         <input
           value={profile.caregiverName ?? ""}
           onChange={(event) => updateProfile({ caregiverName: event.target.value })}
           placeholder="Their name"
           className="min-h-16 w-full rounded-[1.375rem] border border-border bg-surface px-5 text-lg shadow-[var(--shadow-card)] outline-none placeholder:text-muted focus:border-clay focus:outline-none"
         />
+        </label>
+        <label className="block">
+          <span className="sr-only">Caregiver phone number</span>
+          <input
+            value={profile.caregiverPhone ?? ""}
+            onChange={(event) => updateProfile({ caregiverPhone: event.target.value })}
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="Their phone number (for one-tap help)"
+            className="min-h-16 w-full rounded-[1.375rem] border border-border bg-surface px-5 text-lg shadow-[var(--shadow-card)] outline-none placeholder:text-muted focus:border-clay focus:outline-none"
+          />
+        </label>
+        <label className="block">
+          <span className="sr-only">A supportive thing the caregiver said</span>
         <input
           value={profile.caregiverQuote ?? ""}
           onChange={(event) => updateProfile({ caregiverQuote: event.target.value })}
           placeholder="One thing they said to you"
           className="min-h-16 w-full rounded-[1.375rem] border border-border bg-surface px-5 text-lg shadow-[var(--shadow-card)] outline-none placeholder:text-muted focus:border-clay focus:outline-none"
         />
+        </label>
       </div>
     </StepShell>,
   ];
