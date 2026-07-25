@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const API_KEY = process.env.CLOUDINARY_API_KEY;
 const API_SECRET = process.env.CLOUDINARY_API_SECRET;
-const FOLDER = process.env.CLOUDINARY_FOLDER ?? "anchor";
+const FOLDER = process.env.CLOUDINARY_FOLDER ?? "morrow";
 const TIMEOUT_MS = 20_000;
 
 const isCloudinaryConfigured = () =>

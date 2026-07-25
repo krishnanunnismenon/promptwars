@@ -1,9 +1,12 @@
 /**
- * The Anchor mark. Rounded strokes, open shackle, wide flukes — an anchor that
- * reads as steadying rather than nautical-decorative. Used small (a wordmark
- * companion) and large (the resting state on the home screen).
+ * The Morrow mark. A sun just clearing the horizon — "the morrow" is the
+ * morning that comes after, which is the whole promise of the app: not a
+ * triumphant sunrise, just the next ordinary day arriving on schedule.
+ *
+ * Rounded strokes and an open arc, so it reads as warm rather than corporate,
+ * and stays legible at 14px next to the wordmark.
  */
-export function AnchorMark({ className = "size-6" }: { className?: string }) {
+export function MorrowMark({ className = "size-6" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 32 32"
@@ -15,27 +18,29 @@ export function AnchorMark({ className = "size-6" }: { className?: string }) {
       className={className}
       aria-hidden
     >
-      <circle cx="16" cy="6" r="3" />
-      <path d="M16 9v17" />
-      <path d="M10 13h12" />
-      <path d="M5 18a11 11 0 0 0 11 8 11 11 0 0 0 11-8" />
+      {/* horizon */}
+      <path d="M4 24h24" />
+      {/* the sun, still partly below it */}
+      <path d="M9.5 24a6.5 6.5 0 0 1 13 0" />
+      {/* first light */}
+      <path d="M16 8.5v2.5M24.5 12l-1.7 1.7M7.5 12l1.7 1.7" />
     </svg>
   );
 }
 
 /** Wordmark: mark + name, for screen headers. */
-export function AnchorWordmark({ className = "" }: { className?: string }) {
+export function MorrowWordmark({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <AnchorMark className="size-5" />
-      <span className="text-lg font-bold tracking-tight">Anchor</span>
+      <MorrowMark className="size-5" />
+      <span className="text-lg font-bold tracking-tight">Morrow</span>
     </span>
   );
 }
 
 /**
  * Soft background wash. Two overlapping blurred blobs, drifting slowly — the
- * warmth in the reference comes from these, not from the card styling.
+ * warmth in the design comes from these, not from the card styling.
  */
 export function SoftBlobs({ tone = "day" }: { tone?: "day" | "night" }) {
   const primary = tone === "day" ? "var(--sage)" : "var(--clay)";

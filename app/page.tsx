@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { AnchorMark, AnchorWordmark, SoftBlobs } from "@/components/AnchorMark";
+import { MorrowMark, MorrowWordmark, SoftBlobs } from "@/components/MorrowMark";
 import { JourneyGrid } from "@/components/JourneyGrid";
 import { getRole, getWatching } from "@/lib/session";
 import { useAppState } from "@/lib/useAppState";
@@ -47,7 +47,7 @@ export default function Home() {
       <SoftBlobs />
 
       <header className="relative flex items-center justify-between">
-        <AnchorWordmark className="text-clay" />
+        <MorrowWordmark className="text-clay" />
       </header>
 
       <div className="relative flex flex-1 flex-col items-center justify-center gap-6">
@@ -55,7 +55,7 @@ export default function Home() {
         <button
           type="button"
           onClick={() => router.push("/timeline")}
-          aria-label={`${days} days anchored. Open your timeline.`}
+          aria-label={`${days} days clear. Open your timeline.`}
           className="relative flex flex-col items-center transition duration-150 ease-out active:scale-[0.98]"
         >
           <span className="animate-breathe absolute -top-6 size-48 rounded-full bg-sage/20 blur-3xl" />
@@ -63,7 +63,7 @@ export default function Home() {
             {days}
           </span>
           <span className="relative mt-1.5 text-base font-semibold text-muted">
-            {days === 1 ? "day" : "days"} anchored
+            {days === 1 ? "day" : "days"} clear
           </span>
         </button>
 
@@ -74,7 +74,7 @@ export default function Home() {
           onClick={() => router.push("/timeline")}
           className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-muted transition duration-150 ease-out active:scale-[0.97]"
         >
-          <AnchorMark className="size-3.5 text-sage-ink" />
+          <MorrowMark className="size-3.5 text-sage-ink" />
           See your timeline
         </button>
       </div>

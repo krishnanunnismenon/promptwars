@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 
-import { AnchorMark, SoftBlobs } from "@/components/AnchorMark";
+import { MorrowMark, SoftBlobs } from "@/components/MorrowMark";
 import { CaregiverNoteCard, useCaregiverNote } from "@/components/CaregiverNote";
 import { DiaryComposer } from "@/components/DiaryComposer";
 import { RELAPSE_LINE } from "@/lib/journey";
@@ -149,7 +149,7 @@ export default function TimelinePage() {
           {days}
         </p>
         <p className="relative mt-1 text-base font-semibold text-muted">
-          {days === 1 ? "day" : "days"} anchored
+          {days === 1 ? "day" : "days"} clear
           {relapses > 0 && <span className="text-muted"> · {relapses} slip{relapses > 1 ? "s" : ""}</span>}
         </p>
       </section>
@@ -169,7 +169,7 @@ export default function TimelinePage() {
 
         {entries.length === 0 ? (
           <div className="mt-4 rounded-[var(--radius-card)] border border-dashed border-border bg-surface/70 px-6 py-10 text-center">
-            <AnchorMark className="mx-auto size-7 text-clay/60" />
+            <MorrowMark className="mx-auto size-7 text-clay/60" />
             <p className="mt-3 text-lg font-bold">No entries yet</p>
             <p className="mx-auto mt-1.5 max-w-[30ch] text-base leading-relaxed text-muted text-pretty">
               Each day you get through adds one line here, in your own voice.

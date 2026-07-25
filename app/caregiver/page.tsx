@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { AnchorMark, AnchorWordmark, SoftBlobs } from "@/components/AnchorMark";
+import { MorrowMark, MorrowWordmark, SoftBlobs } from "@/components/MorrowMark";
 import { Helplines } from "@/components/Helplines";
 import { NoteComposer } from "@/components/NoteComposer";
 import { endSession } from "@/lib/session";
@@ -105,7 +105,7 @@ function CaregiverView() {
     return (
       <main className="relative mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 overflow-hidden px-6">
         <SoftBlobs />
-        <AnchorMark className="relative size-8 text-clay/70" />
+        <MorrowMark className="relative size-8 text-clay/70" />
         <h1 className="relative text-2xl font-bold">Nothing to show yet</h1>
         <p className="relative max-w-[32ch] text-lg leading-relaxed text-muted text-pretty">
           This page fills in once they&apos;ve finished setting up.
@@ -140,7 +140,7 @@ function CaregiverView() {
       )}
 
       <header className="relative">
-        <AnchorWordmark className="text-clay" />
+        <MorrowWordmark className="text-clay" />
         <h1 className="mt-4 text-[1.75rem] leading-tight font-bold tracking-tight">
           How {name} is doing
         </h1>
@@ -155,7 +155,7 @@ function CaregiverView() {
             {Math.max(1, state.cleanDays)}
           </p>
           <p className="mt-1.5 text-sm font-semibold text-muted">
-            {state.cleanDays === 1 ? "day" : "days"} anchored
+            {state.cleanDays === 1 ? "day" : "days"} clear
           </p>
         </div>
 

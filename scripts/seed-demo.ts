@@ -11,7 +11,7 @@
  *
  * To view it in the app: open /caregiver?id=<the id printed below>. To make a
  * phone show it as its own profile, set the id in the browser console:
- *   localStorage.setItem("futureself:profileId", JSON.stringify("<id>"))
+ *   localStorage.setItem("morrow:profileId", JSON.stringify("<id>"))
  * then reload — the app pulls the document down on next load.
  */
 
@@ -21,7 +21,7 @@ import { MongoClient } from "mongodb";
 
 import { buildDemoState } from "../lib/demoSeed.ts";
 
-const DEMO_ID = "demo-365-anchor";
+const DEMO_ID = "demo-365-morrow";
 const DB_NAME = process.env.MONGO_DB_NAME ?? "futureself";
 const COLLECTION = "profiles";
 
@@ -119,7 +119,7 @@ async function main() {
     console.log(`  supporting them  ${state.profile.caregiverPhone}   (${state.profile.caregiverName})`);
     console.log(``);
     console.log(`Caregiver view:  /caregiver?id=${id}`);
-    console.log(`On a device:     localStorage.setItem("futureself:profileId", ${JSON.stringify(JSON.stringify(id))})`);
+    console.log(`On a device:     localStorage.setItem("morrow:profileId", ${JSON.stringify(JSON.stringify(id))})`);
   } finally {
     await client.close();
   }

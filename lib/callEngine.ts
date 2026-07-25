@@ -102,8 +102,8 @@ export function buildContext(state: AppState): string {
   ].join("\n");
 }
 
-/** Manual override for demos: localStorage.setItem("anchor:voice", "Samantha") */
-const VOICE_OVERRIDE_KEY = "anchor:voice";
+/** Manual override for demos: localStorage.setItem("morrow:voice", "Samantha") */
+const VOICE_OVERRIDE_KEY = "morrow:voice";
 
 /**
  * Voices named "Compact", or the bare OS defaults, are the flat robotic ones.

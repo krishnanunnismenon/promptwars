@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-import { AnchorMark, SoftBlobs } from "@/components/AnchorMark";
+import { MorrowMark, SoftBlobs } from "@/components/MorrowMark";
 import { useAppState } from "@/lib/useAppState";
 import type { YearReview } from "@/app/api/year-review/route";
 
@@ -81,7 +81,7 @@ export default function ReviewPage() {
         </Link>
 
         <p className="mt-5 flex items-center gap-2 text-sm font-bold text-clay">
-          <AnchorMark className="size-4" />
+          <MorrowMark className="size-4" />
           {stats.days} days
         </p>
         <h1 className="mt-2 text-[1.875rem] leading-tight font-bold tracking-tight text-balance">

@@ -10,8 +10,8 @@
 import { DEFAULT_APP_STATE, EMPTY_PERSONA, EMPTY_PROFILE, type AppState } from "./types";
 
 /** Bumped when the AppState shape changes — old keys are simply ignored. */
-export const APP_STATE_KEY = "futureself:appState:v1";
-export const PROFILE_ID_KEY = "futureself:profileId";
+export const APP_STATE_KEY = "morrow:appState:v1";
+export const PROFILE_ID_KEY = "morrow:profileId";
 
 const canUseStorage = () =>
   typeof window !== "undefined" && typeof window.localStorage !== "undefined";

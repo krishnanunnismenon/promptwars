@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { generate, imagePart, type GeminiContent, type GeminiPart } from "@/lib/server/gemini";
 import {
-  DEFAULT_MODEL,
   DEFAULT_SYSTEM_PROMPT,
   type ChatTurn,
   type GeminiRequestBody,
@@ -11,8 +11,6 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const MODEL_ID = process.env.GEMINI_MODEL || DEFAULT_MODEL;
 const TIMEOUT_MS = 20_000;
 
 /**
@@ -31,28 +29,18 @@ function fallback(error: string): NextResponse<GeminiResponseBody> {
   return NextResponse.json({ text: FALLBACK_TEXT, fallback: true, error });
 }
 
-/** Splits a data URI (or bare base64) into a Gemini inlineData part. */
-function toInlinePart(imageBase64: string) {
-  const match = /^data:([^;,]+);base64,([\s\S]*)$/.exec(imageBase64.trim());
-  return {
-    inlineData: {
-      mimeType: match ? match[1] : "image/jpeg",
-      data: (match ? match[2] : imageBase64).replace(/\s/g, ""),
-    },
-  };
-}
-
-type Part = { text: string } | ReturnType<typeof toInlinePart>;
-
 function toContents(messages: ChatTurn[], imageBase64?: string) {
   const contents = messages
     // `system` turns go in systemInstruction, not the transcript.
     .filter((m) => m.role !== "system" && typeof m.content === "string")
     .map((m) => {
-      const parts: Part[] = [];
+      const parts: GeminiPart[] = [];
       if (m.content.trim()) parts.push({ text: m.content });
-      if (m.imageBase64) parts.push(toInlinePart(m.imageBase64));
-      return { role: m.role === "assistant" ? "model" : "user", parts };
+      if (m.imageBase64) parts.push(imagePart(m.imageBase64));
+      return {
+        role: (m.role === "assistant" ? "model" : "user") as GeminiContent["role"],
+        parts,
+      };
     })
     .filter((c) => c.parts.length > 0);
 
@@ -60,26 +48,13 @@ function toContents(messages: ChatTurn[], imageBase64?: string) {
   if (imageBase64) {
     const last = contents[contents.length - 1];
     if (last && last.role === "user") {
-      last.parts.push(toInlinePart(imageBase64));
+      last.parts.push(imagePart(imageBase64));
     } else {
-      contents.push({ role: "user", parts: [toInlinePart(imageBase64)] });
+      contents.push({ role: "user", parts: [imagePart(imageBase64)] });
     }
   }
 
   return contents;
-}
-
-function extractText(payload: unknown): string {
-  const candidate = (
-    payload as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    }
-  )?.candidates?.[0];
-
-  return (candidate?.content?.parts ?? [])
-    .map((p) => p.text ?? "")
-    .join("")
-    .trim();
 }
 
 import { GeminiRequestBodySchema } from "@/lib/schemas";
@@ -102,54 +77,15 @@ export async function POST(request: Request) {
   const contents = toContents(messages, body?.imageBase64);
   if (contents.length === 0) return fallback("no messages to send");
 
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
-  if (!apiKey) return fallback("GEMINI_API_KEY is not set");
+  const result = await generate({
+    contents,
+    systemPrompt: body?.systemPrompt || DEFAULT_SYSTEM_PROMPT,
+    temperature: 0.7,
+    maxOutputTokens: 2048,
+    timeoutMs: TIMEOUT_MS,
+    model: body?.model,
+  });
 
-  const model = body?.model || MODEL_ID;
-  const systemPrompt = body?.systemPrompt || DEFAULT_SYSTEM_PROMPT;
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-  try {
-    const response = await fetch(
-      `${API_BASE}/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      return fallback(`Gemini returned ${response.status}: ${detail.slice(0, 500)}`);
-    }
-
-    const text = extractText(await response.json());
-    if (!text) return fallback("Gemini returned an empty response");
-
-    return NextResponse.json<GeminiResponseBody>(
-      { text },
-      { headers: { "Cache-Control": "no-store, max-age=0" } },
-    );
-  } catch (error) {
-    const reason =
-      error instanceof Error && error.name === "AbortError"
-        ? `request timed out after ${TIMEOUT_MS}ms`
-        : error instanceof Error
-          ? error.message
-          : "unknown error";
-    return fallback(reason);
-  } finally {
-    clearTimeout(timer);
-  }
+  if (!result.ok) return fallback(result.error);
+  return NextResponse.json<GeminiResponseBody>({ text: result.text });
 }

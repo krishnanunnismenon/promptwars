@@ -13,10 +13,10 @@ import { APP_STATE_KEY } from "./storage";
 
 export type Role = "user" | "caregiver";
 
-const ROLE_KEY = "anchor:role";
-const PHONE_KEY = "anchor:phone";
+const ROLE_KEY = "morrow:role";
+const PHONE_KEY = "morrow:phone";
 /** For a caregiver: whose profile they are watching. */
-const WATCHING_KEY = "anchor:watching";
+const WATCHING_KEY = "morrow:watching";
 
 /** Digits only, so "+91 98765 43210" and "9876543210" are the same person. */
 export function normalizePhone(input: string): string {

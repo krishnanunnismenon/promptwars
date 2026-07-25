@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { AnchorMark, SoftBlobs } from "@/components/AnchorMark";
+import { MorrowMark, SoftBlobs } from "@/components/MorrowMark";
 import { SelfieStep } from "@/components/onboarding/SelfieStep";
 import { SAMPLE_TRANSCRIPT, VoiceNoteStep } from "@/components/onboarding/VoiceNoteStep";
 import {
@@ -130,7 +130,7 @@ export default function OnboardingPage() {
         <SoftBlobs />
         <div className="relative">
           <span className="animate-breathe absolute -inset-6 rounded-full bg-sage/25 blur-2xl" />
-          <AnchorMark className="relative size-14 text-clay" />
+          <MorrowMark className="relative size-14 text-clay" />
         </div>
         <div className="relative text-center">
           <p className="text-xl font-bold">Building your future self</p>

@@ -10,8 +10,8 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Anchor",
-  description: "The version of you that made it, one call away.",
+  title: "Morrow",
+  description: "Tomorrow, calling. The version of you that made it, one call away.",
 };
 
 export const viewport: Viewport = {

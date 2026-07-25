@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { AnchorMark, SoftBlobs } from "@/components/AnchorMark";
+import { MorrowMark, SoftBlobs } from "@/components/MorrowMark";
 import { isValidPhone, normalizePhone, startSession, type Role } from "@/lib/session";
 import { saveAppState, setItem } from "@/lib/storage";
 import { PROFILE_ID_KEY } from "@/lib/storage";
@@ -94,8 +94,8 @@ export default function LoginPage() {
 
       <div className="relative">
         <span className="inline-flex items-center gap-2 text-clay">
-          <AnchorMark className="size-6" />
-          <span className="text-xl font-bold tracking-tight">Anchor</span>
+          <MorrowMark className="size-6" />
+          <span className="text-xl font-bold tracking-tight">Morrow</span>
         </span>
 
         {!role ? (
