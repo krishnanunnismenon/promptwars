@@ -5,10 +5,10 @@
 
 export const HELPLINES = [
   {
-    name: "Kiran",
-    number: "1800-599-0019",
-    tel: "18005990019",
-    note: "India · 24/7 · toll-free · 13 languages",
+    name: "Tele-MANAS",
+    number: "1800-89-14416",
+    tel: "18008914416",
+    note: "India · 24/7 · toll-free mental-health support",
   },
 ] as const;
 

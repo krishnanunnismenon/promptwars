@@ -46,7 +46,7 @@ Addiction is an asymmetric negotiation between your **present self** (desiring i
 
 ### 3. Crisis Guardrails
 - **Input**: Escalation flags and sentiment evaluation.
-- **Action**: Immediately surfaces verified national helplines (Kiran 24/7 1800-599-0019) and notifies designated caregiver.
+- **Action**: Immediately surfaces Tele-MANAS, India’s 24/7 toll-free mental-health support line (1800-89-14416), and opens a user-controlled caregiver handoff.
 
 ---
 
