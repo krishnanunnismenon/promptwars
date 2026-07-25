@@ -174,6 +174,26 @@ export class CallEngine {
     this.emit();
   }
 
+  /**
+   * "I need real help" was pressed. Cuts off whatever is being said, states
+   * plainly that the caregiver is being told, and asks nothing of the user.
+   */
+  async escalate(caregiverName?: string) {
+    if (this.disposed) return;
+    this.clearSilenceTimer();
+    this.stopListening();
+    if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
+
+    const who = caregiverName?.trim();
+    await this.speakAll(
+      who
+        ? `I'm letting ${who} know. You don't have to do anything.`
+        : `I'm getting someone to you. You don't have to do anything.`,
+    );
+
+    if (!this.disposed) this.startListening();
+  }
+
   /** Manual trigger for the in-call camera icon. */
   captureNow() {
     if (this.disposed || this.cameraOpen) return;

@@ -3,17 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Helplines } from "@/components/Helplines";
 import { Waveform } from "@/components/call/Waveform";
 import { useCallEngine } from "@/lib/callEngine";
 import { useRingtone } from "@/lib/ringtone";
 import { useAppState } from "@/lib/useAppState";
-
-/**
- * Set this to the crisis line for your region before shipping. Left empty on
- * purpose — a wrong number here is worse than no number.
- */
-const HELPLINE_NUMBER = "";
-const HELPLINE_LABEL = "a crisis helpline";
 
 const COMMITMENT_MS = 10 * 60 * 1000;
 
@@ -36,17 +30,36 @@ export default function CallPage() {
 
   const getLevel = useCallback(() => engine.current?.level ?? 0.05, [engine]);
 
+  /** `outcome: null` ends without logging — used when escalation already did. */
   const finish = useCallback(
-    (outcome: "calmed" | "escalated") => {
+    (outcome: "calmed" | "escalated" | null) => {
       engine.current?.end();
-      update((previous) => ({
-        ...previous,
-        callHistory: [...previous.callHistory, { timestamp: Date.now(), outcome }],
-      }));
+      if (outcome) {
+        update((previous) => ({
+          ...previous,
+          callHistory: [...previous.callHistory, { timestamp: Date.now(), outcome }],
+        }));
+      }
       setScreen("ended");
     },
     [engine, update],
   );
+
+  /**
+   * Logged the moment it's pressed, not when the call ends — the caregiver
+   * view should light up while this person is still on the phone.
+   */
+  const escalate = useCallback(() => {
+    update((previous) => ({
+      ...previous,
+      callHistory: [
+        ...previous.callHistory,
+        { timestamp: Date.now(), outcome: "escalated" as const },
+      ],
+    }));
+    void engine.current?.escalate(state.profile.caregiverName);
+    setShowHelp(true);
+  }, [engine, state.profile.caregiverName, update]);
 
   // Ten-minute commitment countdown on the ended screen.
   useEffect(() => {
@@ -195,7 +208,7 @@ export default function CallPage() {
         <footer className="relative space-y-5 px-8 pb-14">
           <button
             type="button"
-            onClick={() => setShowHelp(true)}
+            onClick={escalate}
             className="min-h-14 w-full rounded-2xl border border-red-500/40 bg-red-500/10 text-base font-medium text-red-300 transition active:scale-[0.98]"
           >
             I need real help
@@ -248,29 +261,20 @@ export default function CallPage() {
         {showHelp && (
           <div className="absolute inset-0 z-10 flex flex-col justify-end bg-black/80 p-6 pb-14 backdrop-blur-sm">
             <div className="space-y-4 rounded-3xl border border-white/10 bg-surface p-6">
-              <h2 className="text-2xl font-semibold text-white">Let&apos;s get someone real.</h2>
-              {state.profile.caregiverName ? (
-                <p className="text-lg leading-relaxed text-white/70">
-                  Call {state.profile.caregiverName} right now. They asked you to.
-                </p>
-              ) : (
-                <p className="text-lg leading-relaxed text-white/70">
-                  Call someone you trust right now, or {HELPLINE_LABEL}.
-                </p>
-              )}
+              <h2 className="text-2xl font-semibold text-white">
+                {state.profile.caregiverName
+                  ? `${state.profile.caregiverName} has been told.`
+                  : "Help is on the way."}
+              </h2>
+              <p className="text-lg leading-relaxed text-white/70">
+                You don&apos;t have to do anything. Stay on the line if you want to.
+              </p>
 
-              {HELPLINE_NUMBER && (
-                <a
-                  href={`tel:${HELPLINE_NUMBER}`}
-                  className="flex min-h-16 w-full items-center justify-center rounded-2xl bg-red-600 text-lg font-medium text-white"
-                >
-                  Call {HELPLINE_NUMBER}
-                </a>
-              )}
+              <Helplines />
 
               <button
                 type="button"
-                onClick={() => finish("escalated")}
+                onClick={() => finish(null)}
                 className="min-h-16 w-full rounded-2xl border border-white/15 text-lg text-white/80"
               >
                 End this call
@@ -292,13 +296,13 @@ export default function CallPage() {
   /* ---------------------------------------------------------------- */
 
   return (
-    <main className="flex h-dvh flex-col items-center justify-center gap-10 bg-black px-8">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-9 bg-black px-6 py-12">
       <div className="text-center">
         <h1 className="text-3xl font-medium text-white">Call ended</h1>
         <p className="mt-3 text-lg text-white/50">Timer started. Ten minutes, together.</p>
       </div>
 
-      <div className="relative flex size-56 items-center justify-center">
+      <div className="relative flex size-56 shrink-0 items-center justify-center">
         <svg viewBox="0 0 100 100" className="absolute size-full -rotate-90">
           <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
           <circle
@@ -317,10 +321,14 @@ export default function CallPage() {
         <span className="font-mono text-5xl text-white tabular-nums">{mmss(countdown)}</span>
       </div>
 
+      <div className="w-full">
+        <Helplines />
+      </div>
+
       <button
         type="button"
         onClick={() => router.push("/")}
-        className="min-h-16 w-full max-w-sm rounded-2xl border border-white/15 text-lg text-white/80 transition active:scale-[0.98]"
+        className="min-h-16 w-full rounded-2xl border border-white/15 text-lg text-white/80 transition active:scale-[0.98]"
       >
         {countdown > 0 ? "I'm okay for now" : "Ten minutes done"}
       </button>

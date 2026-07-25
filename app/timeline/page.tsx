@@ -95,7 +95,9 @@ export default function TimelinePage() {
           }}
         />
 
-        <div className="relative size-44 overflow-hidden rounded-full border border-white/10">
+        {/* Sized generously: a small shape under blur(20px) reads as an empty
+            smudge, and day 1 is exactly when the figure needs to read as a person. */}
+        <div className="relative size-56 overflow-hidden rounded-full border border-white/10">
           {state.profile.photoBase64 ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -109,7 +111,7 @@ export default function TimelinePage() {
               className="flex size-full items-center justify-center bg-white/5 transition-[filter] duration-700"
               style={{ filter: `blur(${blur}px)` }}
             >
-              <svg viewBox="0 0 24 24" className="size-24 text-white/70" fill="currentColor">
+              <svg viewBox="0 0 24 24" className="size-44 text-white/80" fill="currentColor">
                 <circle cx="12" cy="8" r="4" />
                 <path d="M4 21a8 8 0 0 1 16 0z" />
               </svg>
