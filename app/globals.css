@@ -1,76 +1,212 @@
 @import "tailwindcss";
 
-/* Dark-only app: `dark:` variants follow the class on <html>, which is always set. */
-@custom-variant dark (&:where(.dark, .dark *));
+/**
+ * Anchor — design tokens.
+ *
+ * Two surfaces, on purpose:
+ *
+ *   Day  — cream and clay. Home, timeline, caregiver, onboarding. Warm, ordinary,
+ *          domestic. These screens should feel like a kitchen table, not a clinic.
+ *   Night — deep espresso. The call, and only the call. The palette inverts at the
+ *          exact moment the user is in crisis, at 2am, at 20% brightness.
+ *
+ * Every text pair below is measured against WCAG AA (4.5:1 body, 3:1 large).
+ * Sage is a fill for bars and large icons only — white on sage is 3.52:1.
+ */
 
 :root {
-  --background: #09090b;
-  --surface: #131316;
-  --border: #26262b;
-  --foreground: #ededed;
-  --muted: #a1a1aa;
-  --accent: #7c5cff;
+  /* Day */
+  --cream: oklch(0.938 0.011 74);
+  --surface: oklch(0.982 0.005 78);
+  --surface-sunk: oklch(0.905 0.014 74);
+  --border: oklch(0.868 0.018 72);
+  --ink: oklch(0.268 0.021 47); /* 12.7:1 on cream */
+  --muted: oklch(0.487 0.024 53); /* 5.7:1 on cream */
+
+  /* Roles */
+  --clay: oklch(0.487 0.079 51); /* primary action, 5.0:1 on cream */
+  --sage: oklch(0.606 0.077 133); /* progress, positive */
+  --sage-ink: oklch(0.474 0.072 133); /* sage as text, 5.2:1 on cream */
+  --amber: oklch(0.797 0.116 82); /* caution, highlights */
+  --lilac: oklch(0.643 0.086 305); /* rare accent */
+  --danger: oklch(0.481 0.143 32); /* 5.7:1 on cream */
+  --on-clay: oklch(0.982 0.008 78);
+
+  /* Night — the call */
+  --night: oklch(0.204 0.014 45);
+  --night-raised: oklch(0.263 0.017 46);
+  --night-ink: oklch(0.928 0.014 76); /* 14.7:1 */
+  --night-muted: oklch(0.735 0.021 65); /* 7.7:1 */
+  --night-danger: oklch(0.782 0.104 27); /* 9.1:1 */
+
+  /* Form */
+  --radius-field: 1.125rem;
+  --radius-card: 1.75rem;
+  --shadow-card: 0 1px 2px oklch(0.42 0.03 55 / 0.04), 0 8px 24px -12px oklch(0.42 0.03 55 / 0.14);
+  --shadow-lift: 0 2px 4px oklch(0.42 0.03 55 / 0.05), 0 18px 40px -16px oklch(0.42 0.03 55 / 0.22);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-cream: var(--cream);
   --color-surface: var(--surface);
+  --color-sunk: var(--surface-sunk);
   --color-border: var(--border);
-  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
   --color-muted: var(--muted);
-  --color-accent: var(--accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-clay: var(--clay);
+  --color-sage: var(--sage);
+  --color-sage-ink: var(--sage-ink);
+  --color-amber: var(--amber);
+  --color-lilac: var(--lilac);
+  --color-danger: var(--danger);
+  --color-on-clay: var(--on-clay);
+  --color-night: var(--night);
+  --color-night-raised: var(--night-raised);
+  --color-night-ink: var(--night-ink);
+  --color-night-muted: var(--night-muted);
+  --color-night-danger: var(--night-danger);
+
+  --font-sans: var(--font-nunito);
+  --radius-field: var(--radius-field);
+  --radius-card: var(--radius-card);
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-nunito), ui-rounded, system-ui, sans-serif;
+  /* Numbers line up in timers, day counts and durations. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--accent) 40%, transparent);
+  background: color-mix(in oklab, var(--sage) 32%, transparent);
 }
 
-/* Wizard slide transitions. */
+/* Focus is visible everywhere, and warm rather than the browser's blue. */
+:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.night :focus-visible {
+  outline-color: var(--night-ink);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Motion                                                                  */
+/* ---------------------------------------------------------------------- */
+
 @keyframes slide-in-right {
   from {
     opacity: 0;
-    transform: translateX(28px);
+    transform: translate3d(24px, 0, 0);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 @keyframes slide-in-left {
   from {
     opacity: 0;
-    transform: translateX(-28px);
+    transform: translate3d(-24px, 0, 0);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Entrances for lists — staggered via inline delay at the call site. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* The resting state of the app: a slow, deliberate breath. Used on the
+   incoming-call halo and the timeline glow — both are "we're still here". */
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) rotate(1.5deg);
   }
 }
 
 .animate-slide-in-right {
-  animation: slide-in-right 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: slide-in-right 0.32s var(--ease-out-quart) both;
 }
 
 .animate-slide-in-left {
-  animation: slide-in-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: slide-in-left 0.32s var(--ease-out-quart) both;
+}
+
+.animate-rise {
+  animation: rise 0.4s var(--ease-out-quart) both;
+}
+
+.animate-breathe {
+  animation: breathe 5.5s ease-in-out infinite;
+}
+
+.animate-drift {
+  animation: drift 11s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-slide-in-right,
-  .animate-slide-in-left {
+  .animate-slide-in-left,
+  .animate-rise {
+    animation: fade-in 0.2s ease-out both;
+  }
+
+  .animate-breathe,
+  .animate-drift {
     animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

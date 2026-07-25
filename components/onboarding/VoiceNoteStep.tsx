@@ -113,12 +113,14 @@ export function VoiceNoteStep({
         onClick={toggle}
         disabled={!supported}
         aria-label={listening ? "Stop recording" : "Start recording"}
-        className={`relative flex size-36 items-center justify-center rounded-full border-2 transition active:scale-95 disabled:opacity-40 ${
-          listening ? "border-accent bg-accent/20" : "border-border bg-surface"
+        className={`relative flex size-36 items-center justify-center rounded-full border transition duration-150 ease-out active:scale-95 disabled:opacity-40 ${
+          listening
+            ? "border-sage bg-sage/20 shadow-[var(--shadow-lift)]"
+            : "border-border bg-surface shadow-[var(--shadow-card)]"
         }`}
       >
         {listening && (
-          <span className="absolute inset-0 animate-ping rounded-full bg-accent/20" aria-hidden />
+          <span className="animate-breathe absolute inset-0 rounded-full bg-sage/25" aria-hidden />
         )}
         <svg
           viewBox="0 0 24 24"
@@ -126,7 +128,7 @@ export function VoiceNoteStep({
           stroke="currentColor"
           strokeWidth={1.5}
           strokeLinecap="round"
-          className={`relative size-14 ${listening ? "text-accent" : "text-foreground"}`}
+          className={`relative size-14 ${listening ? "text-sage-ink" : "text-clay"}`}
           aria-hidden
         >
           <rect x="9" y="2" width="6" height="12" rx="3" />
@@ -144,16 +146,16 @@ export function VoiceNoteStep({
               : "Tap and start talking"}
       </p>
 
-      {error && <p className="mt-1 text-sm text-amber-400">{error}</p>}
+      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
 
-      <div className="mt-6 min-h-32 w-full rounded-2xl border border-border bg-surface p-4">
+      <div className="mt-6 min-h-32 w-full rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
         {transcript ? (
-          <p className="text-base leading-relaxed whitespace-pre-wrap">
+          <p className="text-[1.0625rem] leading-relaxed whitespace-pre-wrap">
             {value}
             {interim && <span className="text-muted"> {interim}</span>}
           </p>
         ) : (
-          <p className="text-base leading-relaxed text-muted/60">
+          <p className="text-[1.0625rem] leading-relaxed text-muted">
             Your words will appear here as you speak.
           </p>
         )}

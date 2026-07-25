@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { AnchorMark, AnchorWordmark, SoftBlobs } from "@/components/AnchorMark";
 import { Helplines } from "@/components/Helplines";
 import { normalizeAppState } from "@/lib/storage";
 import { useAppState } from "@/lib/useAppState";
@@ -100,13 +101,15 @@ function CaregiverView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.profile.name, outcome, state?.cleanDays]);
 
-  if (!ready) return <main className="min-h-dvh bg-background" />;
+  if (!ready) return <main className="min-h-dvh bg-cream" />;
 
   if (!state || !state.profile.name) {
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-6">
-        <h1 className="text-2xl font-semibold">Nothing to show yet</h1>
-        <p className="text-lg text-muted">
+      <main className="relative mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 overflow-hidden px-6">
+        <SoftBlobs />
+        <AnchorMark className="relative size-8 text-clay/70" />
+        <h1 className="relative text-2xl font-bold">Nothing to show yet</h1>
+        <p className="relative max-w-[32ch] text-lg leading-relaxed text-muted text-pretty">
           This page fills in once they&apos;ve finished setting up.
         </p>
       </main>
@@ -114,81 +117,109 @@ function CaregiverView() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 px-5 py-10">
+    <main className="relative mx-auto flex min-h-dvh max-w-md flex-col gap-4 overflow-hidden px-5 py-9">
+      <SoftBlobs />
+
       {escalated && (
         <section
           role="alert"
-          className="rounded-2xl border border-red-500/40 bg-red-500/10 p-5"
+          className="animate-rise relative rounded-[var(--radius-card)] border border-danger/35 bg-danger/10 p-5"
         >
-          <p className="text-xs tracking-[0.15em] text-red-300/80 uppercase">Right now</p>
-          <p className="mt-2 text-xl leading-snug font-medium text-red-200">
+          <p className="flex items-center gap-2 text-sm font-bold text-danger">
+            <span className="animate-breathe size-2 rounded-full bg-danger" aria-hidden />
+            Right now
+          </p>
+          <p className="mt-2 text-xl leading-snug font-bold text-balance">
             {name} asked for real help on a call.
           </p>
           {lastCall && (
-            <p className="mt-2 text-base text-red-200/60">{formatWhen(lastCall.timestamp)}</p>
+            <p className="mt-1.5 text-base text-muted">{formatWhen(lastCall.timestamp)}</p>
           )}
-          <p className="mt-3 text-base leading-relaxed text-red-100/70">
+          <p className="mt-3 max-w-[38ch] text-base leading-relaxed text-pretty">
             Call {name} now, or just go to them. You don&apos;t need the right words.
           </p>
         </section>
       )}
 
-      <header>
-        <p className="text-sm tracking-[0.15em] text-muted uppercase">
-          {state.profile.caregiverName ? `For ${state.profile.caregiverName}` : "For you"}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">How {name} is doing</h1>
+      <header className="relative">
+        <AnchorWordmark className="text-clay" />
+        <h1 className="mt-4 text-[1.75rem] leading-tight font-bold tracking-tight">
+          How {name} is doing
+        </h1>
+        {state.profile.caregiverName && (
+          <p className="mt-1 text-base text-muted">for {state.profile.caregiverName}</p>
+        )}
       </header>
 
-      <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-border bg-surface p-5">
-          <p className="text-5xl font-semibold tabular-nums">{Math.max(1, state.cleanDays)}</p>
-          <p className="mt-1 text-sm text-muted">
-            {state.cleanDays === 1 ? "day" : "days"} clean
+      <section className="relative grid grid-cols-2 gap-2.5">
+        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
+          <p className="text-[2.75rem] leading-none font-bold tracking-[-0.03em] text-sage-ink">
+            {Math.max(1, state.cleanDays)}
+          </p>
+          <p className="mt-1.5 text-sm font-semibold text-muted">
+            {state.cleanDays === 1 ? "day" : "days"} anchored
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-surface p-5">
+        <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
           {lastCall ? (
             <>
-              <p className="text-lg leading-snug font-medium">
+              <p className="text-[1.0625rem] leading-snug font-bold text-pretty">
                 {escalated ? `${name} asked for help.` : `${name} answered. ${name}'s okay.`}
               </p>
-              <p className="mt-2 text-sm text-muted">{formatWhen(lastCall.timestamp)}</p>
+              <p className="mt-1.5 text-sm text-muted">{formatWhen(lastCall.timestamp)}</p>
             </>
           ) : (
             <>
-              <p className="text-lg leading-snug font-medium">No calls yet.</p>
-              <p className="mt-2 text-sm text-muted">That&apos;s good news.</p>
+              <p className="text-[1.0625rem] leading-snug font-bold">No calls yet.</p>
+              <p className="mt-1.5 text-sm text-muted">That&apos;s good news.</p>
             </>
           )}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-surface p-5">
-        <h2 className="text-xs tracking-[0.15em] text-muted uppercase">What to say tonight</h2>
+      <section className="relative rounded-[var(--radius-card)] border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
+        <h2 className="text-sm font-bold text-sage-ink">What to say tonight</h2>
         {advice ? (
           <ul className="mt-3 space-y-3">
-            {advice.say.map((line) => (
-              <li key={line} className="flex gap-3 text-lg leading-relaxed">
-                <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-accent" />
+            {advice.say.map((line, index) => (
+              <li
+                key={line}
+                className="animate-rise flex gap-3 text-[1.0625rem] leading-relaxed text-pretty"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-sage" />
                 <span>{line}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-3 text-base text-muted">Thinking about tonight…</p>
+          /* Skeleton rather than a spinner — the card keeps its shape. */
+          <ul className="mt-3 space-y-3" aria-hidden>
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="flex gap-3">
+                <span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-sunk" />
+                <span
+                  className="h-4 animate-pulse rounded-full bg-sunk"
+                  style={{ width: `${72 - i * 12}%` }}
+                />
+              </li>
+            ))}
+          </ul>
         )}
 
         {advice && (
           <>
-            <h2 className="mt-6 text-xs tracking-[0.15em] text-muted uppercase">
-              What not to say
-            </h2>
+            <div className="my-5 h-px bg-border" />
+            <h2 className="text-sm font-bold text-muted">What not to say</h2>
             <ul className="mt-3 space-y-3">
-              {advice.avoid.map((line) => (
-                <li key={line} className="flex gap-3 text-lg leading-relaxed text-muted">
-                  <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-muted/50" />
+              {advice.avoid.map((line, index) => (
+                <li
+                  key={line}
+                  className="animate-rise flex gap-3 text-[1.0625rem] leading-relaxed text-muted text-pretty"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <span aria-hidden className="mt-2.5 size-1.5 shrink-0 rounded-full bg-border" />
                   <span>{line}</span>
                 </li>
               ))}
@@ -197,14 +228,16 @@ function CaregiverView() {
         )}
       </section>
 
-      <Helplines tone="surface" />
+      <div className="relative">
+        <Helplines />
+      </div>
     </main>
   );
 }
 
 export default function CaregiverPage() {
   return (
-    <Suspense fallback={<main className="min-h-dvh bg-background" />}>
+    <Suspense fallback={<main className="min-h-dvh bg-cream" />}>
       <CaregiverView />
     </Suspense>
   );

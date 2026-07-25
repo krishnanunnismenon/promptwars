@@ -83,7 +83,7 @@ export function SelfieStep({
         type="button"
         onClick={() => input.current?.click()}
         disabled={busy}
-        className="flex size-52 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-border bg-surface transition active:scale-95 disabled:opacity-50"
+        className="flex size-52 items-center justify-center overflow-hidden rounded-full border border-dashed border-clay/35 bg-surface shadow-[var(--shadow-card)] transition duration-150 ease-out active:scale-95 disabled:opacity-50"
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -95,7 +95,7 @@ export function SelfieStep({
             stroke="currentColor"
             strokeWidth={1.25}
             strokeLinecap="round"
-            className="size-16 text-muted"
+            className="size-16 text-clay/70"
             aria-hidden
           >
             <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.9l1.2-2h6.8l1.2 2h1.9A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z" />
@@ -107,7 +107,7 @@ export function SelfieStep({
       <p className="mt-5 min-h-6 text-sm text-muted">
         {busy ? "Adding photo…" : value ? "Tap to retake" : "Tap to take a photo"}
       </p>
-      {error && <p className="mt-1 text-sm text-amber-400">{error}</p>}
+      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
 
       {value && (
         <button

@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { AnchorMark, SoftBlobs } from "@/components/AnchorMark";
 import { SelfieStep } from "@/components/onboarding/SelfieStep";
 import { SAMPLE_TRANSCRIPT, VoiceNoteStep } from "@/components/onboarding/VoiceNoteStep";
 import {
@@ -125,9 +126,16 @@ export default function OnboardingPage() {
 
   if (step === BUILDING_STEP) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6">
-        <span className="size-12 animate-spin rounded-full border-2 border-border border-t-accent" />
-        <p className="text-lg text-muted">Building your future self…</p>
+      <main className="relative flex min-h-dvh flex-col items-center justify-center gap-7 overflow-hidden px-6">
+        <SoftBlobs />
+        <div className="relative">
+          <span className="animate-breathe absolute -inset-6 rounded-full bg-sage/25 blur-2xl" />
+          <AnchorMark className="relative size-14 text-clay" />
+        </div>
+        <div className="relative text-center">
+          <p className="text-xl font-bold">Building your future self</p>
+          <p className="mt-2 text-base text-muted">One moment — we&apos;re reading it all back.</p>
+        </div>
       </main>
     );
   }
@@ -155,7 +163,7 @@ export default function OnboardingPage() {
         placeholder="Your name"
         enterKeyHint="next"
         autoComplete="given-name"
-        className="w-full border-b-2 border-border bg-transparent pb-3 text-4xl font-medium outline-none placeholder:text-muted/40 focus:border-accent"
+        className="w-full border-b-2 border-border bg-transparent pb-3 text-4xl font-bold tracking-tight outline-none placeholder:font-medium placeholder:text-muted/70 focus:border-clay focus:outline-none"
       />
     </StepShell>,
 
@@ -293,22 +301,25 @@ export default function OnboardingPage() {
           value={profile.caregiverName ?? ""}
           onChange={(event) => updateProfile({ caregiverName: event.target.value })}
           placeholder="Their name"
-          className="min-h-16 w-full rounded-2xl border border-border bg-surface px-5 text-lg outline-none placeholder:text-muted/50 focus:border-accent"
+          className="min-h-16 w-full rounded-[1.375rem] border border-border bg-surface px-5 text-lg shadow-[var(--shadow-card)] outline-none placeholder:text-muted focus:border-clay focus:outline-none"
         />
         <input
           value={profile.caregiverQuote ?? ""}
           onChange={(event) => updateProfile({ caregiverQuote: event.target.value })}
           placeholder="One thing they said to you"
-          className="min-h-16 w-full rounded-2xl border border-border bg-surface px-5 text-lg outline-none placeholder:text-muted/50 focus:border-accent"
+          className="min-h-16 w-full rounded-[1.375rem] border border-border bg-surface px-5 text-lg shadow-[var(--shadow-card)] outline-none placeholder:text-muted focus:border-clay focus:outline-none"
         />
       </div>
     </StepShell>,
   ];
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden">
-      <ProgressDots total={TOTAL_STEPS} current={step} />
-      {screens[step]}
+    <main className="relative mx-auto flex h-dvh max-w-md flex-col overflow-hidden">
+      <SoftBlobs />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <ProgressDots total={TOTAL_STEPS} current={step} />
+        {screens[step]}
+      </div>
     </main>
   );
 }

@@ -54,10 +54,12 @@ export function Waveform({ getLevel }: { getLevel: () => number }) {
         const barHeight = Math.max(3, heights[i] * height * 0.9);
         const x = i * gap + (gap - barWidth) / 2;
 
+        // Warm sage → amber, matching the night surface rather than the
+        // cool violet the dark theme used.
         const gradient = ctx.createLinearGradient(0, mid - barHeight / 2, 0, mid + barHeight / 2);
-        gradient.addColorStop(0, `rgba(167,139,250,${0.35 + level * 0.55})`);
-        gradient.addColorStop(0.5, `rgba(124,92,255,${0.55 + level * 0.45})`);
-        gradient.addColorStop(1, `rgba(167,139,250,${0.35 + level * 0.55})`);
+        gradient.addColorStop(0, `rgba(197,164,106,${0.34 + level * 0.5})`);
+        gradient.addColorStop(0.5, `rgba(150,176,116,${0.62 + level * 0.38})`);
+        gradient.addColorStop(1, `rgba(197,164,106,${0.34 + level * 0.5})`);
         ctx.fillStyle = gradient;
 
         ctx.beginPath();
