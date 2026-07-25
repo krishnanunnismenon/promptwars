@@ -126,7 +126,13 @@ const WARM_VOICE_NAMES = [
   "Google US English",
 ];
 
+const voiceScoreCache = new Map<string, number>();
+
 function scoreVoice(voice: SpeechSynthesisVoice): number {
+  const cacheKey = `${voice.name}:${voice.lang}`;
+  const cached = voiceScoreCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   const name = voice.name.toLowerCase();
   let score = 0;
 
@@ -148,6 +154,7 @@ function scoreVoice(voice: SpeechSynthesisVoice): number {
   if (lang.startsWith("en")) score += 20;
   if (lang.startsWith("en-in") || lang.startsWith("en-gb")) score += 6;
 
+  voiceScoreCache.set(cacheKey, score);
   return score;
 }
 

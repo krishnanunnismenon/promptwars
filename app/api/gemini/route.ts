@@ -137,7 +137,10 @@ export async function POST(request: Request) {
     const text = extractText(await response.json());
     if (!text) return fallback("Gemini returned an empty response");
 
-    return NextResponse.json<GeminiResponseBody>({ text });
+    return NextResponse.json<GeminiResponseBody>(
+      { text },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
   } catch (error) {
     const reason =
       error instanceof Error && error.name === "AbortError"

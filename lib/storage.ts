@@ -68,7 +68,10 @@ export function getProfileId(): string {
 /* AppState                                                                */
 /* ---------------------------------------------------------------------- */
 
-const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+const clone = <T,>(value: T): T =>
+  typeof structuredClone === "function"
+    ? structuredClone(value)
+    : (JSON.parse(JSON.stringify(value)) as T);
 
 const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
 
